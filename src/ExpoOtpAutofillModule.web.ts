@@ -1,15 +1,16 @@
-import { registerWebModule, NativeModule } from 'expo';
-
+import { EventEmitter } from 'expo-modules-core';
 import { ExpoOtpAutofillModuleEvents } from './ExpoOtpAutofill.types';
 
-class ExpoOtpAutofillModule extends NativeModule<ExpoOtpAutofillModuleEvents> {
-  PI = Math.PI;
-  async setValueAsync(value: string): Promise<void> {
-    this.emit('onChange', { value });
+class ExpoOtpAutofillModuleWeb extends EventEmitter<ExpoOtpAutofillModuleEvents> {
+  async getAppHashAsync(): Promise<string> {
+    return "";
   }
-  hello() {
-    return 'Hello world! 👋';
+  async startSmsRetrieverAsync(): Promise<boolean> {
+    return false;
+  }
+  stopSmsRetrieverAsync(): void {
+    // no-op
   }
 }
 
-export default registerWebModule(ExpoOtpAutofillModule, 'ExpoOtpAutofillModule');
+export default new ExpoOtpAutofillModuleWeb();

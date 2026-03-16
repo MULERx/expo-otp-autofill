@@ -1,50 +1,108 @@
 package expo.modules.otpautofill
 
+import android.content.ActivityNotFoundException
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
+import com.google.android.gms.auth.api.phone.SmsRetriever
+import com.google.android.gms.common.api.CommonStatusCodes
+import com.google.android.gms.common.api.Status
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
-import java.net.URL
 
 class ExpoOtpAutofillModule : Module() {
-  // Each module class must implement the definition function. The definition consists of components
-  // that describes the module's functionality and behavior.
-  // See https://docs.expo.dev/modules/module-api for more details about available components.
+
+  private var receiver: BroadcastReceiver? = null
+
   override fun definition() = ModuleDefinition {
-    // Sets the name of the module that JavaScript code will use to refer to the module. Takes a string as an argument.
-    // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
-    // The module will be accessible from `requireNativeModule('ExpoOtpAutofill')` in JavaScript.
     Name("ExpoOtpAutofill")
 
-    // Defines constant property on the module.
-    Constant("PI") {
-      Math.PI
+    Events("onOtpReceived", "onOtpError")
+
+    AsyncFunction("getAppHashAsync") {
+      val context = appContext.reactContext ?: return@AsyncFunction ""
+      val helper = AppHashHelper(context.packageName, context.packageManager)
+      return@AsyncFunction helper.getHash()
     }
 
-    // Defines event names that the module can send to JavaScript.
-    Events("onChange")
-
-    // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
-    Function("hello") {
-      "Hello world! 👋"
-    }
-
-    // Defines a JavaScript function that always returns a Promise and whose native code
-    // is by default dispatched on the different thread than the JavaScript runtime runs on.
-    AsyncFunction("setValueAsync") { value: String ->
-      // Send an event to JavaScript.
-      sendEvent("onChange", mapOf(
-        "value" to value
-      ))
-    }
-
-    // Enables the module to be used as a native view. Definition components that are accepted as part of
-    // the view definition: Prop, Events.
-    View(ExpoOtpAutofillView::class) {
-      // Defines a setter for the `url` prop.
-      Prop("url") { view: ExpoOtpAutofillView, url: URL ->
-        view.webView.loadUrl(url.toString())
+    AsyncFunction("startSmsRetrieverAsync") { promise: expo.modules.kotlin.Promise ->
+      val context = appContext.reactContext ?: run {
+        promise.reject("ERR_NO_CONTEXT", "React context is not available", null)
+        return@AsyncFunction
       }
-      // Defines an event that the view can send to JavaScript.
-      Events("onLoad")
+
+      // Start the SMS Retriever API
+      val client = SmsRetriever.getClient(context)
+      val task = client.startSmsRetriever()
+
+      task.addOnSuccessListener {
+        // Successfully started retriever, now listen for the broadcast
+        registerReceiver()
+        promise.resolve(true)
+      }
+
+      task.addOnFailureListener { e ->
+        promise.reject("ERR_START_RETRIEVER", "Failed to start SMS Retriever", e)
+      }
+    }
+
+    AsyncFunction("stopSmsRetrieverAsync") {
+      unregisterReceiver()
+    }
+    
+    OnDestroy {
+      unregisterReceiver()
+    }
+  }
+
+  private fun registerReceiver() {
+    val context = appContext.reactContext ?: return
+    
+    // Prevent double registration
+    unregisterReceiver()
+
+    receiver = object : BroadcastReceiver() {
+      override fun onReceive(context: Context, intent: Intent) {
+        if (SmsRetriever.SMS_RETRIEVED_ACTION == intent.action) {
+          val extras = intent.extras
+          val smsRetrieverStatus = extras?.get(SmsRetriever.EXTRA_STATUS) as? Status
+
+          when (smsRetrieverStatus?.statusCode) {
+            CommonStatusCodes.SUCCESS -> {
+              // Get SMS message contents
+              val message = extras.get(SmsRetriever.EXTRA_SMS_MESSAGE) as? String
+              if (message != null) {
+                sendEvent("onOtpReceived", mapOf("message" to message))
+              }
+            }
+            CommonStatusCodes.TIMEOUT -> {
+              // Time out occurred, waiting for SMS to arrive (5 minutes max)
+              sendEvent("onOtpError", mapOf("message" to "Timeout waiting for SMS"))
+            }
+          }
+        }
+      }
+    }
+
+    val intentFilter = IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      context.registerReceiver(receiver, intentFilter, SmsRetriever.SEND_PERMISSION, null, Context.RECEIVER_EXPORTED)
+    } else {
+      context.registerReceiver(receiver, intentFilter, SmsRetriever.SEND_PERMISSION, null)
+    }
+  }
+
+  private fun unregisterReceiver() {
+    val context = appContext.reactContext ?: return
+    receiver?.let {
+      try {
+        context.unregisterReceiver(it)
+      } catch (e: Exception) {
+        // Ignore unregister errors if not registered
+      }
+      receiver = null
     }
   }
 }
