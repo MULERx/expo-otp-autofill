@@ -81,38 +81,41 @@ export function useOtpAutoFill(options?: {
     let subError: any = null;
 
     async function setup() {
+      if (!isMounted) return;
       try {
         await startSmsRetrieverAsync();
-        
-        subReceived = ExpoOtpAutofillModule.addListener('onOtpReceived', (event) => {
-          if (!isMounted) return;
-          const msg = event.message;
-          setMessage(msg);
-          const detectedCode = extractOtp(msg, { length: options?.length });
-          
-          if (detectedCode) {
-            setOtp(detectedCode);
-            
-            // Auto timeout reset
-            const timeoutMs = options?.timeout ?? 30000;
-            if (timeoutMs > 0) {
-              if (timerRef.current) clearTimeout(timerRef.current);
-              timerRef.current = setTimeout(() => {
-                if (isMounted) clear();
-              }, timeoutMs);
-            }
-          }
-        });
-
-        subError = ExpoOtpAutofillModule.addListener('onOtpError', () => {
-          // Timeout from Google Play Services (5 mins elapsed with no SMS)
-          stopSmsRetrieverAsync();
-        });
-
       } catch (err) {
         console.warn('Failed to start SMS Retriever: ', err);
       }
     }
+
+    subReceived = ExpoOtpAutofillModule.addListener('onOtpReceived', (event) => {
+      if (!isMounted) return;
+      const msg = event.message;
+      setMessage(msg);
+      const detectedCode = extractOtp(msg, { length: options?.length });
+      
+      if (detectedCode) {
+        setOtp(detectedCode);
+        
+        // Auto timeout reset
+        const timeoutMs = options?.timeout ?? 30000;
+        if (timeoutMs > 0) {
+          if (timerRef.current) clearTimeout(timerRef.current);
+          timerRef.current = setTimeout(() => {
+            if (isMounted) clear();
+          }, timeoutMs);
+        }
+      }
+      // Restart listener for the next message
+      setup();
+    });
+
+    subError = ExpoOtpAutofillModule.addListener('onOtpError', () => {
+      // Timeout from Google Play Services (5 mins elapsed with no SMS)
+      // Restart listener automatically
+      setup();
+    });
 
     setup();
 
