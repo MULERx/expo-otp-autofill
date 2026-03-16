@@ -8,11 +8,9 @@ import android.os.Build
 import com.google.android.gms.auth.api.phone.SmsRetriever
 import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.android.gms.common.api.Status
+import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 class ExpoOtpAutofillModule : Module() {
 
@@ -30,21 +28,21 @@ class ExpoOtpAutofillModule : Module() {
     }
 
     // Triggers Google Play Services to listen for one incoming SMS (up to 5 min).
-    // Requires ZERO Android permissions — uses only the 11-char App Hash in the SMS body.
-    AsyncFunction("startSmsRetrieverAsync") {
-      val context = appContext.reactContext
-        ?: throw Exception("React context is not available")
-
-      suspendCancellableCoroutine { cont ->
-        SmsRetriever.getClient(context).startSmsRetriever()
-          .addOnSuccessListener {
-            registerReceiver()
-            cont.resume(true)
-          }
-          .addOnFailureListener { e ->
-            cont.resumeWithException(e)
-          }
+    // Uses explicit Promise callback — the correct pattern for async callbacks in Expo Modules API.
+    AsyncFunction("startSmsRetrieverAsync") { promise: Promise ->
+      val context = appContext.reactContext ?: run {
+        promise.reject("ERR_NO_CONTEXT", "React context is not available", null)
+        return@AsyncFunction
       }
+
+      SmsRetriever.getClient(context).startSmsRetriever()
+        .addOnSuccessListener {
+          registerReceiver()
+          promise.resolve(true)
+        }
+        .addOnFailureListener { e ->
+          promise.reject("ERR_START_RETRIEVER", e.message ?: "Failed to start SMS Retriever", e)
+        }
     }
 
     // Stops the native broadcast receiver (called automatically on hook unmount)
