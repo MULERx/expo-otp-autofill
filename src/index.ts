@@ -72,7 +72,6 @@ export function useOtpAutoFill(options?: {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
-    stopSmsRetrieverAsync();
   }, []);
 
   useEffect(() => {
@@ -123,7 +122,8 @@ export function useOtpAutoFill(options?: {
       isMounted = false;
       subReceived?.remove();
       subError?.remove();
-      clear();
+      if (timerRef.current) clearTimeout(timerRef.current);
+      stopSmsRetrieverAsync();
     };
   }, []);
 
