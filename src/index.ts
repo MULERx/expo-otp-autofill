@@ -20,12 +20,12 @@ export function extractOtp(
     // 1. Keyword-adjacent code with colon/equals e.g., "OTP: 123456"
     new RegExp(
       `(?:otp|code|pin|password|passcode|verification)[\\s:=]+([0-9]{${minLength},${maxLength}})(?![0-9])`,
-      'ij'
+      'i'
     ),
     // 2. Phrase pattern e.g., "is your verification code" -> the digits before
     new RegExp(
       `([0-9]{${minLength},${maxLength}})(?=[\\s\\.]*(?:is|as)\\s+(?:your|the)?\\s*(?:otp|code|pin|password|passcode|verification))`,
-      'ij'
+      'i'
     ),
     // 3. Fallback: Any standalone block of digits that fits the length
     new RegExp(`(?<![0-9])([0-9]{${minLength},${maxLength}})(?![0-9])`, 'i'),
