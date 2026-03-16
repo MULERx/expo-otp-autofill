@@ -8,9 +8,11 @@ import android.os.Build
 import com.google.android.gms.auth.api.phone.SmsRetriever
 import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.android.gms.common.api.Status
-import com.google.android.gms.tasks.await
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 class ExpoOtpAutofillModule : Module() {
 
@@ -21,22 +23,31 @@ class ExpoOtpAutofillModule : Module() {
 
     Events("onOtpReceived", "onOtpError")
 
-    // Returns the 11-char app hash needed by your server to address SMS to this app
+    // Returns the 11-char app hash your server must append at the end of the OTP SMS
     AsyncFunction("getAppHashAsync") {
       val context = appContext.reactContext ?: return@AsyncFunction ""
       AppHashHelper(context.packageName, context.packageManager).getHash()
     }
 
-    // Starts the Google Play Services SMS Retriever — listens for up to 5 minutes.
+    // Triggers Google Play Services to listen for one incoming SMS (up to 5 min).
+    // Requires ZERO Android permissions — uses only the 11-char App Hash in the SMS body.
     AsyncFunction("startSmsRetrieverAsync") {
       val context = appContext.reactContext
         ?: throw Exception("React context is not available")
-      SmsRetriever.getClient(context).startSmsRetriever().await()
-      registerReceiver()
-      true
+
+      suspendCancellableCoroutine { cont ->
+        SmsRetriever.getClient(context).startSmsRetriever()
+          .addOnSuccessListener {
+            registerReceiver()
+            cont.resume(true)
+          }
+          .addOnFailureListener { e ->
+            cont.resumeWithException(e)
+          }
+      }
     }
 
-    // Stop the native broadcast receiver manually
+    // Stops the native broadcast receiver (called automatically on hook unmount)
     AsyncFunction("stopSmsRetrieverAsync") {
       unregisterReceiver()
     }
@@ -46,11 +57,11 @@ class ExpoOtpAutofillModule : Module() {
     }
   }
 
-  // ─── BroadcastReceiver management ─────────────────────────────────────────
+  // ─── BroadcastReceiver ────────────────────────────────────────────────────
 
   private fun registerReceiver() {
     val context = appContext.reactContext ?: return
-    unregisterReceiver() // prevent double registration
+    unregisterReceiver() // prevent double-register
 
     receiver = object : BroadcastReceiver() {
       override fun onReceive(ctx: Context, intent: Intent) {
@@ -60,9 +71,7 @@ class ExpoOtpAutofillModule : Module() {
         when (status?.statusCode) {
           CommonStatusCodes.SUCCESS -> {
             val message = intent.extras?.get(SmsRetriever.EXTRA_SMS_MESSAGE) as? String
-            if (message != null) {
-              sendEvent("onOtpReceived", mapOf("message" to message))
-            }
+            if (message != null) sendEvent("onOtpReceived", mapOf("message" to message))
           }
           CommonStatusCodes.TIMEOUT -> {
             sendEvent("onOtpError", mapOf("message" to "Timeout waiting for SMS"))
@@ -73,11 +82,7 @@ class ExpoOtpAutofillModule : Module() {
 
     val filter = IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION)
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-      context.registerReceiver(
-        receiver, filter,
-        SmsRetriever.SEND_PERMISSION, null,
-        Context.RECEIVER_EXPORTED
-      )
+      context.registerReceiver(receiver, filter, SmsRetriever.SEND_PERMISSION, null, Context.RECEIVER_EXPORTED)
     } else {
       context.registerReceiver(receiver, filter, SmsRetriever.SEND_PERMISSION, null)
     }
