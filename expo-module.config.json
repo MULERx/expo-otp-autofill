@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android", "web"],
+  "apple": {
+    "modules": ["ExpoOtpAutofillModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.otpautofill.ExpoOtpAutofillModule"]
+  }
+}
