@@ -12,10 +12,11 @@ A native Expo wrapper for Android's official **Google SMS Retriever API**. This 
 
 | Feature | Description |
 |---|---|
-| **Zero Permissions** | No need to ask the user for dangerous `RECEIVE_SMS` or `READ_SMS` permissions. Play Store completely approves this exact method. |
-| **Silent Intercept** | Google Play Services intercepts only the SMS meant for your app based on the 11-char app Hash. |
-| **`useOtpAutoFill` Hook** | Simple plug-and-play React hook with auto-parsing logic and clear/timeout functionality. |
-| **App Hash Generator** | Generate the exact 11-character app hash Google requires (`getAppHashAsync()`), directly derived from your app's package name and signing certificate. |
+| **Zero Permissions** | No need to ask the user for dangerous `RECEIVE_SMS` or `READ_SMS` permissions. Google Play Store natively approves this exact implementation. |
+| **Silent Intercept** | Google Play Services natively intercepts only the SMS meant for your app based on the unique 11-char App Hash. |
+| **`useOtpAutoFill` Hook** | Simple plug-and-play React hook with auto-parsing logic. |
+| **Continuous Listening** | Uniquely allows intercepting multiple consecutive OTP messages by instantly resetting the background listener after every read. |
+| **App Hash Generator** | Instantly generate the exact 11-character app hash Google requires (`getAppHashAsync()`) programmatically. |
 
 > **Note:** Because this library uses the official Google SMS Retriever API, the server transmitting your OTP messages **must append your 11-character App Hash at the very end of the SMS content.** Example:
 >
@@ -50,10 +51,10 @@ import { View, TextInput, Button, Text } from 'react-native';
 import { useOtpAutoFill, getAppHashAsync } from 'expo-otp-autofill';
 
 export default function MyLoginScreen() {
-  // 1. Hook begins listening automatically on mount
+  // 1. Hook begins listening automatically on mount and seamlessly resets after an OTP is intercepted
   const { otp, message, clear } = useOtpAutoFill({
     length: 6,         // Optional: Number of digits to extract (default is [4, 8])
-    timeout: 30000,    // Optional: How long to keep the `otp` state before clearing (default 30000ms. 0 disables)
+    timeout: 30000,    // Optional: How long to keep the `otp` state visible horizontally before clearing (default 30000ms. 0 disables)
   });
 
   useEffect(() => {
@@ -90,7 +91,7 @@ export default function MyLoginScreen() {
 |---|---|---|
 | `otp` | `string \| null` | The purely extracted numeric code (e.g. `"123456"`) |
 | `message` | `string \| null` | The raw complete SMS message including your app hash. |
-| `clear` | `() => void` | Cancels the active listener and clears the `otp` and `message` variables. |
+| `clear` | `() => void` | Removes the `otp` and `message` states from the screen, **without killing the background listener**. The API will immediately capture the next OTP sent. |
 
 ---
 
