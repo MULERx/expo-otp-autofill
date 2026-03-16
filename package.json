@@ -1,5 +1,5 @@
 {
-  "name": "expo-otp-autofill",
+  "name": "expo-android-otp-autofill",
   "version": "1.0.0",
   "description": "Zero permission Android SMS Retriever API implementation for OTP Autofill in Expo apps.",
   "main": "build/index.js",
