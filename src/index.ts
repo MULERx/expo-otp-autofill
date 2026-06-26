@@ -1,6 +1,10 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { EventSubscription } from 'expo-modules-core';
 import ExpoOtpAutofillModule from './ExpoOtpAutofillModule';
+import { ExpoOtpAutofillModuleEvents } from './ExpoOtpAutofill.types';
+
 export * from './ExpoOtpAutofill.types';
+export type { EventSubscription };
 
 // Helper to extract OTP using regex patterns you mapped earlier in expo-sms-listener
 export function extractOtp(
@@ -128,4 +132,11 @@ export function useOtpAutoFill(options?: {
   }, []);
 
   return { otp, message, clear };
+}
+
+export function addListener<EventName extends keyof ExpoOtpAutofillModuleEvents>(
+  eventName: EventName,
+  listener: ExpoOtpAutofillModuleEvents[EventName]
+): EventSubscription {
+  return ExpoOtpAutofillModule.addListener(eventName, listener);
 }
