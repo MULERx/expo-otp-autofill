@@ -1,5 +1,5 @@
-import { addListener, extractOtp } from '../index';
 import ExpoOtpAutofillModule from '../ExpoOtpAutofillModule';
+import { addListener, extractOtp } from '../index';
 
 jest.mock('../ExpoOtpAutofillModule', () => {
   return {
@@ -33,7 +33,7 @@ describe('ExpoOtpAutofill', () => {
 
       expect(ExpoOtpAutofillModule.addListener).toHaveBeenCalledWith(
         'onOtpReceived',
-        callback
+        callback,
       );
       expect(subscription).toBeDefined();
       expect(typeof subscription.remove).toBe('function');

@@ -1,48 +1,37 @@
 import ExpoModulesCore
 
+/**
+ * iOS no-op implementation.
+ *
+ * This library wraps Android's Google SMS Retriever API, which has no iOS
+ * counterpart: iOS autofills one-time codes itself from the QuickType bar when a
+ * text field declares `textContentType="oneTimeCode"`, with no native module
+ * involved.
+ *
+ * The module still declares the full API surface — same function names and the
+ * same events as the Android and web implementations — so that shared JS calling
+ * `useOtpAutoFill()` unconditionally (as the Rules of Hooks require) resolves
+ * harmlessly instead of throwing on a missing function or an undeclared event.
+ */
 public class ExpoOtpAutofillModule: Module {
-  // Each module class must implement the definition function. The definition consists of components
-  // that describes the module's functionality and behavior.
-  // See https://docs.expo.dev/modules/module-api for more details about available components.
   public func definition() -> ModuleDefinition {
-    // Sets the name of the module that JavaScript code will use to refer to the module. Takes a string as an argument.
-    // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
-    // The module will be accessible from `requireNativeModule('ExpoOtpAutofill')` in JavaScript.
     Name("ExpoOtpAutofill")
 
-    // Defines constant property on the module.
-    Constant("PI") {
-      Double.pi
+    // Declared so `addListener` has a valid event to attach to. Never emitted.
+    Events("onOtpReceived", "onOtpError")
+
+    // No signing-certificate hash applies on iOS.
+    AsyncFunction("getAppHashAsync") { () -> String in
+      return ""
     }
 
-    // Defines event names that the module can send to JavaScript.
-    Events("onChange")
-
-    // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
-    Function("hello") {
-      return "Hello world! 👋"
+    // `false` signals to the caller that no retriever was started.
+    AsyncFunction("startSmsRetrieverAsync") { () -> Bool in
+      return false
     }
 
-    // Defines a JavaScript function that always returns a Promise and whose native code
-    // is by default dispatched on the different thread than the JavaScript runtime runs on.
-    AsyncFunction("setValueAsync") { (value: String) in
-      // Send an event to JavaScript.
-      self.sendEvent("onChange", [
-        "value": value
-      ])
-    }
-
-    // Enables the module to be used as a native view. Definition components that are accepted as part of the
-    // view definition: Prop, Events.
-    View(ExpoOtpAutofillView.self) {
-      // Defines a setter for the `url` prop.
-      Prop("url") { (view: ExpoOtpAutofillView, url: URL) in
-        if view.webView.url != url {
-          view.webView.load(URLRequest(url: url))
-        }
-      }
-
-      Events("onLoad")
+    AsyncFunction("stopSmsRetrieverAsync") {
+      // no-op
     }
   }
 }

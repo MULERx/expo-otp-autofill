@@ -1,7 +1,7 @@
 {
   "name": "expo-otp-autofill",
-  "version": "1.0.8",
-  "description": "Expo OTP Autofill",
+  "version": "1.1.0",
+  "description": "Automatically read and auto-fill OTP SMS verification codes in Expo and React Native apps on Android, with zero SMS permissions. Typed wrapper around Google's SMS Retriever API.",
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "scripts": {
@@ -16,10 +16,23 @@
     "open:android": "open -a \"Android Studio\" example/android"
   },
   "keywords": [
-    "react-native",
     "expo",
-    "expo-otp-autofill",
-    "ExpoOtpAutofill"
+    "react-native",
+    "otp",
+    "otp-autofill",
+    "sms-otp",
+    "sms-retriever",
+    "sms-verification",
+    "one-time-password",
+    "verification-code",
+    "autofill",
+    "android",
+    "expo-module",
+    "two-factor-authentication",
+    "2fa",
+    "phone-verification",
+    "zero-permissions",
+    "expo-otp-autofill"
   ],
   "repository": "https://github.com/MULERx/expo-otp-autofill.git",
   "bugs": {
@@ -28,12 +41,15 @@
   "author": "Mulugeta <xmullerx123@gmail.com> (MULERx)",
   "license": "MIT",
   "homepage": "https://github.com/MULERx/expo-otp-autofill.git#readme",
-  "dependencies": {},
   "devDependencies": {
+    "@testing-library/react-native": "^13.3.3",
     "@types/react": "~19.1.1",
-    "expo-module-scripts": "^55.0.2",
     "expo": "^55.0.5",
-    "react-native": "0.82.1"
+    "expo-module-scripts": "^55.0.2",
+    "react": "^19.2.8",
+    "react-native": "0.82.1",
+    "react-native-web": "^0.21.2",
+    "react-test-renderer": "^19.2.8"
   },
   "peerDependencies": {
     "expo": "*",

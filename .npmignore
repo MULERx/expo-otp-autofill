@@ -8,7 +8,13 @@ __mocks__
 __tests__
 
 /babel.config.js
+/eslint.config.js
+/jest.config.js
+/.prettierrc
 /android/src/androidTest/
 /android/src/test/
 /android/build/
+/android/.gradle/
+/android/.cxx/
+/ios/build/
 /example/
